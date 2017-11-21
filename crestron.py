@@ -62,7 +62,7 @@ def convert_sheet( dealerName, sheet):
     data = bbbb.decode(encoding='cp1251')
     f2.write(data)
     f2.close()
-    if os.path.exists('c://AV_PROM/prices/profdisplay') : shutil.copy2( csvFName, 'c://AV_PROM/prices/profdisplay/'+csvFName)
+    if os.path.exists('c://AV_PROM/prices/'+dealerName) : shutil.copy2( csvFName, 'c://AV_PROM/prices/'+dealerName+'/'+csvFName)
 
 
 
