@@ -364,8 +364,8 @@ def processing(cfgFName):
     filename_new = cfg.get('download','filename_new')
     
     rc_download = False
-    if cfg.has_section('download'):
-        rc_download = download(cfg)
+    #if cfg.has_section('download'):
+    #    rc_download = download(cfg)
     if rc_download==True or is_file_fresh( filename_new, int(cfg.get('basic','срок годности'))):
         #os.system( 'marvel_converter_xlsx.xlsm')
         #convert_csv2csv(cfg)
