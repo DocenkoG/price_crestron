@@ -238,29 +238,25 @@ def download( cfg ):
                 ",application/xv+xml" +
                 ",application/excel")
         if os.name == 'posix':
-            driver = webdriver.Firefox(ffprofile, executable_path=r'/usr/local/Cellar/geckodriver/0.19.1/bin/geckodriver')
+            #driver = webdriver.Firefox(ffprofile, executable_path=r'/usr/local/Cellar/geckodriver/0.19.1/bin/geckodriver')
+            driver = webdriver.Firefox(ffprofile, executable_path=r'/usr/local/bin/geckodriver')
         elif os.name == 'nt':
             driver = webdriver.Firefox(ffprofile)
         driver.implicitly_wait(30)
         
         driver.get(url_lk)
         time.sleep(2)
-        driver.find_element_by_id("cntMain_ctrlLogin_loginControl_Username").clear()
-        driver.find_element_by_id("cntMain_ctrlLogin_loginControl_Username").send_keys("mas@av-prom.ru")
-        driver.find_element_by_id("cntMain_ctrlLogin_loginControl_Password").clear()
-        driver.find_element_by_id("cntMain_ctrlLogin_loginControl_Password").send_keys("hsBNxPiRCY")
-        driver.find_element_by_id("cntMain_ctrlLogin_loginControl_Login").click()
-        time.sleep(3)
-        driver.find_element_by_id("cntMain_btnDownload").click()
-        time.sleep(3)
-        driver.find_element_by_id("cntModal_chkTerms").click()
-        time.sleep(3)
-        driver.find_element_by_id("cntModal_btnOneSheetExcel").click()
-        time.sleep(3)
-        driver.find_element_by_id("cntModal_lbDownload").click()
+        driver.find_element_by_id("edit-name").click()
+        driver.find_element_by_id("edit-name").clear()
+        driver.find_element_by_id("edit-name").send_keys(login)
+        driver.find_element_by_id("edit-pass").click()
+        driver.find_element_by_id("edit-pass").clear()
+        driver.find_element_by_id("edit-pass").send_keys(password)
+        driver.find_element_by_id("edit-submit").click()
+        driver.find_element_by_link_text(u"Прайс-лист Crestron").click()
         time.sleep(5)
-        driver.find_element_by_xpath("(//button[@type='button'])[3]").click()
-        time.sleep(3)
+        driver.find_element_by_link_text(u"Выйти из учётной записи").click()
+        time.sleep(1)
         driver.quit()
 
     except Exception as e:
@@ -271,10 +267,10 @@ def download( cfg ):
     print(new_files)
     if len(new_files) == 0 :        
         log.error( 'Не удалось скачать файл прайса ')
-        return False
+        retCode= False
     elif len(new_files)>1 :
         log.error( 'Скачалось несколько файлов. Надо разбираться ...')
-        return False
+        retCode= False
     else:   
         new_file = new_files[0]                                                     # загружен ровно один файл. 
         new_ext  = os.path.splitext(new_file)[-1].lower()
@@ -290,7 +286,7 @@ def download( cfg ):
             if os.path.exists( filename_new) :
                 os.rename( filename_new, filename_old)
             shutil.copy2( DnewFile, filename_new)
-            return True
+            retCode= True
 
         elif new_ext == '.zip':  
             # ветка устаревшая, не проверялась                                      # Архив. Обработка не завершена
@@ -302,20 +298,29 @@ def download( cfg ):
             os.remove(new_file)   
             dir_afte_download = set(os.listdir(os.getcwd()))
             new_files = list( dir_afte_download.difference(dir_befo_download))
+            os.chdir(work_dir)
             if len(new_files) == 1 :   
                 new_file = new_files[0]                                             # разархивирован ровно один файл. 
                 new_ext  = os.path.splitext(new_file)[-1]
-                DnewFile = os.path.join( os.getcwd(),new_file)
+                DnewFile = os.path.join( download_path,new_file)
                 new_file_date = os.path.getmtime(DnewFile)
                 log.debug( 'Файл из архива ' +DnewFile + ' имеет дату ' + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(new_file_date) )     )
-                DnewPrice = DnewFile
+                filename_in= cfg.get('basic','filename_in')
+                if os.path.exists( filename_new) and os.path.exists( filename_old): 
+                    os.remove( filename_old)
+                    os.rename( filename_new, filename_old)
+                if os.path.exists( filename_new) :
+                    os.rename( filename_new, filename_old)
+                shutil.copy2( DnewFile, filename_new)
+                retCode=True
+
             elif len(new_files) >1 :
                 log.debug( 'В архиве не единственный файл. Надо разбираться.')
-                DnewPrice = "dummy"
+                retCode=False
             else:
                 log.debug( 'Нет новых файлов после разархивации. Загляни в папку юниттеста поставщика.')
-                DnewPrice = "dummy"
-            os.chdir(work_dir)
+                retCode=False
+    return retCode
 
 
 
@@ -325,7 +330,7 @@ def config_read( cfgFName ):
     if  os.path.exists('private.cfg'):     
         cfg.read('private.cfg', encoding='utf-8')
     if  os.path.exists(cfgFName):     
-        cfg.read( cfgFName, encoding='utf-8')
+        cfg.read(cfgFName, encoding='utf-8')
     else: 
         log.debug('Нет файла конфигурации '+cfgFName)
     return cfg
@@ -361,31 +366,32 @@ def processing(cfgFName):
     cfg = config_read(cfgFName)
     filename_out = cfg.get('basic','filename_out')
     filename_in  = cfg.get('basic','filename_in')
-    filename_new = cfg.get('download','filename_new')
     
-    rc_download = False
-    #if cfg.has_section('download'):
-    #    rc_download = download(cfg)
-    if rc_download==True or is_file_fresh( filename_new, int(cfg.get('basic','срок годности'))):
-        #os.system( 'marvel_converter_xlsx.xlsm')
-        #convert_csv2csv(cfg)
-        convert_excel2csv(cfg)
+    #os.system( 'marvel_converter_xlsx.xlsm')
+    #convert_csv2csv(cfg)
+    convert_excel2csv(cfg)
     folderName = os.path.basename(os.getcwd())
-    if os.name == 'nt' :
-        if os.path.exists(filename_out)  : shutil.copy2(filename_out , 'c://AV_PROM/prices/' + folderName +'/'+filename_out)
-        if os.path.exists('python.log')  : shutil.copy2('python.log',  'c://AV_PROM/prices/' + folderName +'/python.log')
-        if os.path.exists('python.log.1'): shutil.copy2('python.log.1','c://AV_PROM/prices/' + folderName +'/python.log.1')
     
 
-
-def main( dealerName):
+def main(dealerName):
     """ Обработка прайсов выполняется согласно файлов конфигурации.
     Для этого в текущей папке должны быть файлы конфигурации, описывающие
     свойства файла и правила обработки. По одному конфигу на каждый 
     прайс или раздел прайса со своими правилами обработки
     """
     make_loger()
-    log.info('          '+dealerName )
+    log.info('          ' + dealerName)
+
+    if  os.path.exists('getting.cfg'):
+        cfg = config_read('getting.cfg')
+        filename_new = cfg.get('basic','filename_new')
+
+        rc_download = False
+        if cfg.has_section('download'):
+            rc_download = download(cfg)
+        if not(rc_download==True or is_file_fresh( filename_new, int(cfg.get('basic','срок годности')))):
+            return False
+
     for cfgFName in os.listdir("."):
         if cfgFName.startswith("cfg") and cfgFName.endswith(".cfg"):
             processing(cfgFName)
