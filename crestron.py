@@ -156,6 +156,7 @@ def convert_excel2csv(cfg):
 
 def download( cfg ):
     from selenium import webdriver
+    from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.remote.remote_connection import LOGGER
     LOGGER.setLevel(logging.WARNING)
@@ -245,22 +246,27 @@ def download( cfg ):
         driver.implicitly_wait(30)
         
         driver.get(url_lk)
-        time.sleep(2)
-        driver.find_element_by_id("edit-name").click()
-        driver.find_element_by_id("edit-name").clear()
-        driver.find_element_by_id("edit-name").send_keys(login)
-        driver.find_element_by_id("edit-pass").click()
-        driver.find_element_by_id("edit-pass").clear()
-        driver.find_element_by_id("edit-pass").send_keys(password)
-        driver.find_element_by_id("edit-submit").click()
-        driver.find_element_by_link_text(u"Прайс-лист Crestron").click()
-        time.sleep(5)
-        driver.find_element_by_link_text(u"Выйти из учётной записи").click()
+        driver.find_element(By.LINK_TEXT, "Партнерам").click()
+        driver.find_element(By.CSS_SELECTOR, ".button > span").click()
+        driver.find_element(By.ID, "pwbox-446").click()
+        driver.find_element(By.ID, "pwbox-446").send_keys(password)
+        driver.find_element(By.NAME, "Submit").click()
+        driver.get(r'https://inter.ru/склад/документы/')
+        driver.find_element(By.CSS_SELECTOR, "ul:nth-child(2) > li:nth-child(1) > a").click()
+#        driver.find_element_by_id("edit-name").click()
+#        driver.find_element_by_id("edit-name").clear()
+#        driver.find_element_by_id("edit-name").send_keys(login)
+#        driver.find_element_by_id("edit-pass").click()
+#        driver.find_element_by_id("edit-pass").clear()
+#        driver.find_element_by_id("edit-pass").send_keys(password)
+#        driver.find_element_by_id("edit-submit").click()
+#        driver.find_element_by_link_text(u"Crestron Rus EndUser Price").click()
         time.sleep(1)
         driver.quit()
 
     except Exception as e:
         log.debug('Exception: <' + str(e) + '>')
+        driver.quit()
 
     dir_afte_download = set(os.listdir(download_path))
     new_files = list( dir_afte_download.difference(dir_befo_download))
